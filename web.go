@@ -1,34 +1,32 @@
 package govoting
 
 import (
-	"fmt"
 	mux "github.com/gorilla/mux"
-	// "html/template"
+	"html/template"
 	"net/http"
 )
 
-// // templates variable
-// var templates = template.Must(template.ParseFiles("templates/index.html"))
+// templates variable
+var templates = template.Must(template.ParseGlob("templates/*.html"))
 
-// // render functions
-// func renderTemplate(res http.ResponseWriter, template string) {
-// 	err := templates.ExecuteTemplate(res, template, nil)
-// 	if err != nil {
-// 		http.Error(res, err.Error(), http.StatusInternalServerError)
-// 	}
-// }
+func render(res http.ResponseWriter, name string) {
+	templates.ExecuteTemplate(res, "header", nil)
+	templates.ExecuteTemplate(res, name, nil)
+	templates.ExecuteTemplate(res, "footer", nil)
+
+}
 
 func rootHandler(res http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(res, "Hello, world!")
+	render(res, "index.html")
 }
 
 func init() {
 
 	//create a new mux router
-	r := mux.NewRouter()
-	r.HandleFunc("/", rootHandler)
-	r.HandleFunc("/home", rootHandler)
+	router := mux.NewRouter()
+	router.HandleFunc("/", rootHandler)
+	router.HandleFunc("/home", rootHandler)
 
-	// register it to the net http handler
-	http.Handle("/", r)
+	// register it to the net/http handler
+	http.Handle("/", router)
 }
