@@ -1,0 +1,12 @@
+<section class="row">
+  <div class="large-12 columns">
+    <ul>
+      {{range .}}
+          <div class="panel radius">
+            <header><a href="{{.Link}}"><h3>{{.Title}}<h3></a></header>
+            <aside><small>{{.SubmissionTime}}</small></aside>
+          </div>
+      {{end}}
+    </ul>
+  </div>
+</section>
