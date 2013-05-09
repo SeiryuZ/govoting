@@ -3,6 +3,7 @@ package govoting
 import (
 	"appengine"
 	"appengine/datastore"
+	"appengine/user"
 
 	mux "github.com/gorilla/mux"
 
@@ -60,6 +61,10 @@ func renderTemplate(res http.ResponseWriter, name string, i interface{}) {
 	err := templates.ExecuteTemplate(res, name, i)
 	handleError(res, err, 0)
 }
+
+// func check_user(res http.ResponseWriter, req *http.Request, context appengine.Context) appengine.User {
+
+// }
 
 func rootHandler(res http.ResponseWriter, req *http.Request) {
 	// create context and query the vote items
@@ -139,7 +144,11 @@ func voteDetailHandler(res http.ResponseWriter, req *http.Request) {
 		handleError(res, err, 0)
 	}
 
-	renderTemplate(res, "header", nil)
+	// current_user := user.Current(context)
+	url, err := user.LogoutURL(context, "/")
+	handleError(res, err, 0)
+
+	renderTemplate(res, "header", url)
 	renderTemplate(res, "vote_detail.html", vote)
 	renderTemplate(res, "vote_items.html", vote_items)
 	renderTemplate(res, "footer", nil)
@@ -151,14 +160,25 @@ func voteItemCreateHandler(res http.ResponseWriter, req *http.Request) {
 		// create a context
 		context := appengine.NewContext(req)
 
+		current_user := user.Current(context)
+		if current_user == nil {
+			url, err := user.LoginURL(context, req.URL.String())
+			handleError(res, err, 0)
+			res.Header().Set("Location", url)
+			res.WriteHeader(http.StatusFound)
+			return
+		}
+
 		//get the variable
 		urlVar := mux.Vars(req)
 		vote_id, _ := strconv.ParseInt(urlVar["vote_id"], 10, 64)
 		parent_key := datastore.NewKey(context, "Vote", "", vote_id, nil)
 
+		log.Println("HERE")
+		log.Println(current_user.String())
 		// create context and prepare vote_item to be saved
 		vote_item := VoteItem{
-			Submitter:      "Anonymous",
+			Submitter:      current_user.String(),
 			Title:          req.FormValue("title"),
 			Link:           req.FormValue("link"),
 			SubmissionTime: time.Now(),
