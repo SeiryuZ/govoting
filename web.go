@@ -20,7 +20,7 @@ type Vote struct {
 	Title          string
 	Description    string
 	SubmissionTime time.Time
-	*datastore.Key
+	ID             int64
 }
 
 type VoteItem struct {
@@ -28,7 +28,7 @@ type VoteItem struct {
 	Title          string
 	Link           string
 	SubmissionTime time.Time
-	*datastore.Key
+	ID             int64
 }
 
 type VoteItemComments struct {
@@ -71,7 +71,7 @@ func rootHandler(res http.ResponseWriter, req *http.Request) {
 
 	//attach the key queried to the struct
 	for index := range votes {
-		votes[index].Key = keys[index]
+		votes[index].ID = keys[index].IntID()
 	}
 
 	renderTemplate(res, "header", nil)
@@ -118,7 +118,7 @@ func voteDetailHandler(res http.ResponseWriter, req *http.Request) {
 
 	// query and attach the key
 	datastore.Get(context, key, &vote)
-	vote.Key = key
+	vote.ID = key.IntID()
 
 	query := datastore.NewQuery("VoteItem").Order("-SubmissionTime").Ancestor(key).Limit(20)
 	vote_items := make([]VoteItem, 0, 20)
@@ -127,7 +127,7 @@ func voteDetailHandler(res http.ResponseWriter, req *http.Request) {
 	keys, err := query.GetAll(context, &vote_items)
 	handleError(res, err, 0)
 	for index := range vote_items {
-		vote_items[index].Key = keys[index]
+		vote_items[index].ID = keys[index].IntID()
 	}
 
 	renderTemplate(res, "header", nil)
