@@ -1,0 +1,15 @@
+<section class="row">
+  <div class="large-12 columns">
+    <ul>
+      {{range .}}
+          <div class="panel radius">
+            <header><h3>{{.Title}}<h3></header>
+            <aside class="row">
+              <small class="large-8 columns">{{.SubmissionTime.Format "02-01-2006 15:04:05"}}</small>
+              <small class="large-4 columns"><a href="/vote/{{.IntID}}">Cast a Vote</a></small>
+            </aside>
+          </div>
+      {{end}}
+    </ul>
+  </div>
+</section>
