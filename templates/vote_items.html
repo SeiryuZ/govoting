@@ -3,11 +3,17 @@
     <ul>
       {{range .}}
           <div class="panel radius">
-            <header><a href="{{.Link}}"><h3>{{.Title}}<h3></a></header>
-            <aside class="row">
-              <small class="large-8 columns">{{.SubmissionTime}}</small>
-              <small class="large-4 columns"><a href="/{{.IntID}}">Comments</a></small>
-            </aside>
+            <div class="row">
+              <div class="large-11 columns">
+                <header><a href="{{.Link}}"><h3>{{.Title}}<h3></a></header>
+                <aside class="row">
+                  <small class="large-8 columns">{{.SubmissionTime}}</small>
+  <!--               <small class="large-4 columns"><a href="/{{.IntID}}">Comments</a></small>
+   -->          </aside>
+              </div>
+              <div class="large-1 columns right"><i class="foundicon-up-arrow"></i></div>
+            </div>
+
           </div>
       {{end}}
     </ul>

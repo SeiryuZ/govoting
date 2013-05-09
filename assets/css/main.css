@@ -2,3 +2,9 @@
 .center {
   text-align: center;
 }
+
+.foundicon-up-arrow:hover {
+	color: blue;
+	cursor: pointer;
+	cursor: hand;
+}
