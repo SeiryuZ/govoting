@@ -20,7 +20,7 @@ type Vote struct {
 	Title          string
 	Description    string
 	SubmissionTime time.Time
-	ID             int64
+	ID             int64 `datastore:"-"`
 }
 
 type VoteItem struct {
@@ -28,13 +28,20 @@ type VoteItem struct {
 	Title          string
 	Link           string
 	SubmissionTime time.Time
-	ID             int64
+	ID             int64 `datastore:"-"`
+	Upvote         int   `datastore:"-"`
 }
 
 type VoteItemComments struct {
 	Submitter      string
 	Comment        string
 	SubmissionTime time.Time
+}
+
+func (vote_item VoteItem) ShardKey() string {
+	return vote_item.Submitter + vote_item.Title +
+		vote_item.SubmissionTime.Format("02-01-2006 15:04:05") +
+		strconv.FormatInt(vote_item.ID, 10)
 }
 
 // templates variable
@@ -128,6 +135,8 @@ func voteDetailHandler(res http.ResponseWriter, req *http.Request) {
 	handleError(res, err, 0)
 	for index := range vote_items {
 		vote_items[index].ID = keys[index].IntID()
+		vote_items[index].Upvote, err = Count(context, vote_items[index].ShardKey())
+		handleError(res, err, 0)
 	}
 
 	renderTemplate(res, "header", nil)
@@ -189,6 +198,33 @@ func voteItemHandler(res http.ResponseWriter, req *http.Request) {
 	templates.ExecuteTemplate(res, "footer", nil)
 }
 
+func upvoteHandler(res http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		// create a context
+		context := appengine.NewContext(req)
+
+		vote_item_id := req.FormValue("id")
+
+		log.Println("CALLED")
+		log.Println(vote_item_id)
+		Increment(context, vote_item_id)
+		log.Println("INCREMENTED")
+		total, err := Count(context, vote_item_id)
+		handleError(res, err, 0)
+		log.Println(total)
+
+		// // save and handle error
+		// _, err := datastore.Put(context, datastore.NewIncompleteKey(context, "VoteItem", parent_key), &vote_item)
+		// if err != nil {
+		// 	http.Error(res, err.Error(), http.StatusInternalServerError)
+		// 	return
+		// }
+
+		// http.Redirect(res, req, "/vote/"+strconv.FormatInt(vote_id, 10), http.StatusFound)
+	}
+
+}
+
 func init() {
 
 	//create a new mux router
@@ -196,6 +232,7 @@ func init() {
 	router.HandleFunc("/", rootHandler)
 	router.HandleFunc("/vote/create", voteCreateHandler)
 	router.HandleFunc("/vote/{vote_id}", voteDetailHandler)
+	router.HandleFunc("/upvote", upvoteHandler)
 
 	router.HandleFunc("/vote/{vote_id}/items/create", voteItemCreateHandler)
 
