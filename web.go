@@ -29,6 +29,7 @@ type VoteItem struct {
 	Title          string
 	Link           string
 	SubmissionTime time.Time
+	ParentID       int64 `datastore:"-"`
 	ID             int64 `datastore:"-"`
 	Upvote         int   `datastore:"-"`
 }
@@ -61,10 +62,6 @@ func renderTemplate(res http.ResponseWriter, name string, i interface{}) {
 	err := templates.ExecuteTemplate(res, name, i)
 	handleError(res, err, 0)
 }
-
-// func check_user(res http.ResponseWriter, req *http.Request, context appengine.Context) appengine.User {
-
-// }
 
 func rootHandler(res http.ResponseWriter, req *http.Request) {
 	// create context and query the vote items
@@ -140,7 +137,8 @@ func voteDetailHandler(res http.ResponseWriter, req *http.Request) {
 	handleError(res, err, 0)
 	for index := range vote_items {
 		vote_items[index].ID = keys[index].IntID()
-		vote_items[index].Upvote, err = Count(context, vote_items[index].ShardKey())
+		vote_items[index].ParentID = vote_id
+		vote_items[index].Upvote, err = Count(context, strconv.FormatInt(vote_items[index].ID, 10))
 		handleError(res, err, 0)
 	}
 
@@ -220,17 +218,26 @@ func voteItemHandler(res http.ResponseWriter, req *http.Request) {
 
 func upvoteHandler(res http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
+		shard_id := req.FormValue("id")
+		vote_item_id := req.FormValue("vote_item_id")
+
 		// create a context
 		context := appengine.NewContext(req)
+		current_user := user.Current(context)
+		if current_user == nil {
+			url, err := user.LoginURL(context, "/vote/"+vote_item_id)
+			log.Println(url)
+			log.Println("/vote/" + vote_item_id)
+			handleError(res, err, 0)
+			log.Println(http.StatusForbidden)
+			http.Error(res, url, http.StatusForbidden)
+			return
+		}
 
-		vote_item_id := req.FormValue("id")
-
-		log.Println("CALLED")
-		log.Println(vote_item_id)
-		Increment(context, vote_item_id)
-		log.Println("INCREMENTED")
-		total, err := Count(context, vote_item_id)
+		Increment(context, shard_id)
+		total, err := Count(context, shard_id)
 		handleError(res, err, 0)
+
 		log.Println(total)
 
 		// // save and handle error

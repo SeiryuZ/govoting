@@ -8,3 +8,7 @@
 	cursor: pointer;
 	cursor: hand;
 }
+
+.foundicon-up-arrow.active {
+  color: blue;
+}

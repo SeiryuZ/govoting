@@ -1,0 +1,10 @@
+<section class="comment-list row">
+  <header class="row"><h1>Comment</h1></header>
+  <hr>
+  {{range .}}
+  <section class="comment-item row">
+    <header>{{.Submitter}}: {{.SubmissionTime}}</header>
+    <p>{{.Comment}}</p>
+  </section>
+  {{end}}
+</section>

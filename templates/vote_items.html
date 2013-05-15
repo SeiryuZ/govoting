@@ -8,10 +8,14 @@
                 <header><a href="{{.Link}}"><h3>{{.Title}}<h3></a></header>
                 <aside class="row">
                   <small class="large-8 columns">Submitted by {{.Submitter}} at {{.SubmissionTime.Format "02-01-2006 15:04:05"}}</small>
-  <!--               <small class="large-4 columns"><a href="/{{.ID}}">Comments</a></small>
-   -->          </aside>
+                </aside>
               </div>
-              <div class="large-1 columns right">{{.Upvote}}<a href="#" class="upvote" data-id="{{.ShardKey}}"><i class="foundicon-up-arrow"></i></div>
+              <div class="large-1 columns right">
+                <span class="upvote-count">{{.Upvote}}</span>
+                <a href="#" class="upvote" data-vote-item-id="{{.ParentID}}" data-id="{{.ID}}">
+                  <i class="foundicon-up-arrow upvote-arrow"></i>
+                </a>
+              </div>
             </div>
 
           </div>
