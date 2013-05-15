@@ -34,6 +34,12 @@ type VoteItem struct {
 	Upvote         int   `datastore:"-"`
 }
 
+type Upvote struct {
+	Submitter  string
+	UpvoteTime time.Time
+	ID         int64 `datastore:"-"`
+}
+
 type VoteItemComments struct {
 	Submitter      string
 	Comment        string
@@ -54,6 +60,9 @@ func handleError(res http.ResponseWriter, err error, status_code int) {
 		status_code = http.StatusInternalServerError
 	}
 	if err != nil {
+		log.Println("=====ERROR=====")
+		log.Println(err.Error())
+		log.Println("=====END ERROR=====")
 		http.Error(res, err.Error(), status_code)
 	}
 }
@@ -223,16 +232,39 @@ func upvoteHandler(res http.ResponseWriter, req *http.Request) {
 
 		// create a context
 		context := appengine.NewContext(req)
+
+		//handle user not loggin in
 		current_user := user.Current(context)
 		if current_user == nil {
 			url, err := user.LoginURL(context, "/vote/"+vote_item_id)
-			log.Println(url)
-			log.Println("/vote/" + vote_item_id)
 			handleError(res, err, 0)
-			log.Println(http.StatusForbidden)
 			http.Error(res, url, http.StatusForbidden)
 			return
 		}
+
+		//create parent key for datastoring or retrieval
+		int_shard_id, _ := strconv.ParseInt(shard_id, 10, 64)
+		parent_key := datastore.NewKey(context, "Upvote", "", int_shard_id, nil)
+
+		// check if user has voted
+		// hit memcache first
+
+		// hit database if not found
+		count, err := datastore.NewQuery("Upvote").Ancestor(parent_key).Filter("Submitter=", current_user.String()).Count(context)
+		handleError(res, err, http.StatusInternalServerError)
+		log.Println(count, "HERE")
+		// error out on found
+		if count > 0 {
+			http.Error(res, "You have voted for this item", http.StatusBadRequest)
+			return
+		}
+
+		// else create a new record
+		upvote := Upvote{
+			Submitter:  current_user.String(),
+			UpvoteTime: time.Now(),
+		}
+		_, err = datastore.Put(context, datastore.NewIncompleteKey(context, "Upvote", parent_key), &upvote)
 
 		Increment(context, shard_id)
 		total, err := Count(context, shard_id)

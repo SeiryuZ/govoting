@@ -19,7 +19,13 @@ $('.upvote').on('click', function() {
         window.location = url;
       }
       if (xhr.status == 400) {
-        console.log("Already voted");
+        console.log('here')
+        $alert = $('#alert-box-message')
+        $alert.html('You have voted for this item, tsk tsk tsk, no cheating!');
+        $alert.parent().removeClass('hide');
+        setTimeout(function(){
+          $alert.parent().addClass('hide');
+        }, 2000)
       }
     }
 	});

@@ -12,3 +12,7 @@
 .foundicon-up-arrow.active {
   color: blue;
 }
+
+.alert-error.hide {
+  display: none;
+}
