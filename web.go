@@ -55,21 +55,18 @@ func (vote_item VoteItem) ShardKey() string {
 // templates variable
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 
-func handleError(res http.ResponseWriter, err error, status_code int) {
-	if status_code == 0 {
-		status_code = http.StatusInternalServerError
-	}
+func handleError(res http.ResponseWriter, err error) {
 	if err != nil {
 		log.Println("=====ERROR=====")
 		log.Println(err.Error())
 		log.Println("=====END ERROR=====")
-		http.Error(res, err.Error(), status_code)
+		http.Error(res, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 func renderTemplate(res http.ResponseWriter, name string, i interface{}) {
 	err := templates.ExecuteTemplate(res, name, i)
-	handleError(res, err, 0)
+	handleError(res, err)
 }
 
 func rootHandler(res http.ResponseWriter, req *http.Request) {
@@ -143,17 +140,17 @@ func voteDetailHandler(res http.ResponseWriter, req *http.Request) {
 
 	//query all votes
 	keys, err := query.GetAll(context, &vote_items)
-	handleError(res, err, 0)
+	handleError(res, err)
 	for index := range vote_items {
 		vote_items[index].ID = keys[index].IntID()
 		vote_items[index].ParentID = vote_id
 		vote_items[index].Upvote, err = Count(context, strconv.FormatInt(vote_items[index].ID, 10))
-		handleError(res, err, 0)
+		handleError(res, err)
 	}
 
 	// current_user := user.Current(context)
 	url, err := user.LogoutURL(context, "/")
-	handleError(res, err, 0)
+	handleError(res, err)
 
 	renderTemplate(res, "header", url)
 	renderTemplate(res, "vote_detail.html", vote)
@@ -170,7 +167,7 @@ func voteItemCreateHandler(res http.ResponseWriter, req *http.Request) {
 		current_user := user.Current(context)
 		if current_user == nil {
 			url, err := user.LoginURL(context, req.URL.String())
-			handleError(res, err, 0)
+			handleError(res, err)
 			res.Header().Set("Location", url)
 			res.WriteHeader(http.StatusFound)
 			return
@@ -237,7 +234,7 @@ func upvoteHandler(res http.ResponseWriter, req *http.Request) {
 		current_user := user.Current(context)
 		if current_user == nil {
 			url, err := user.LoginURL(context, "/vote/"+vote_item_id)
-			handleError(res, err, 0)
+			handleError(res, err)
 			http.Error(res, url, http.StatusForbidden)
 			return
 		}
@@ -251,8 +248,7 @@ func upvoteHandler(res http.ResponseWriter, req *http.Request) {
 
 		// hit database if not found
 		count, err := datastore.NewQuery("Upvote").Ancestor(parent_key).Filter("Submitter=", current_user.String()).Count(context)
-		handleError(res, err, http.StatusInternalServerError)
-		log.Println(count, "HERE")
+		handleError(res, err)
 		// error out on found
 		if count > 0 {
 			http.Error(res, "You have voted for this item", http.StatusBadRequest)
@@ -267,19 +263,9 @@ func upvoteHandler(res http.ResponseWriter, req *http.Request) {
 		_, err = datastore.Put(context, datastore.NewIncompleteKey(context, "Upvote", parent_key), &upvote)
 
 		Increment(context, shard_id)
-		total, err := Count(context, shard_id)
-		handleError(res, err, 0)
+		_, err = Count(context, shard_id)
+		handleError(res, err)
 
-		log.Println(total)
-
-		// // save and handle error
-		// _, err := datastore.Put(context, datastore.NewIncompleteKey(context, "VoteItem", parent_key), &vote_item)
-		// if err != nil {
-		// 	http.Error(res, err.Error(), http.StatusInternalServerError)
-		// 	return
-		// }
-
-		// http.Redirect(res, req, "/vote/"+strconv.FormatInt(vote_id, 10), http.StatusFound)
 	}
 
 }
