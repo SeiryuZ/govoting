@@ -18,7 +18,7 @@ type shard struct {
 }
 
 const (
-	defaultShards = 1
+	defaultShards = 20
 	configKind    = "GeneralCounterShardConfig"
 	shardKind     = "GeneralCounterShard"
 )
