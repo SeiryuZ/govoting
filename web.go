@@ -7,6 +7,8 @@ import (
 
 	mux "github.com/gorilla/mux"
 
+	"encoding/json"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -53,7 +55,7 @@ func (vote_item VoteItem) ShardKey() string {
 }
 
 // templates variable
-var templates = template.Must(template.ParseGlob("templates/*.html"))
+var templates = template.Must(template.ParseGlob("app/*.html"))
 
 func handleError(res http.ResponseWriter, err error) {
 	if err != nil {
@@ -70,29 +72,41 @@ func renderTemplate(res http.ResponseWriter, name string, i interface{}) {
 }
 
 func rootHandler(res http.ResponseWriter, req *http.Request) {
-	// create context and query the vote items
+
 	context := appengine.NewContext(req)
 
-	query := datastore.NewQuery("Vote").Order("-SubmissionTime").Limit(20)
+	current_user := user.Current(context)
 
-	votes := make([]Vote, 0, 20)
-
-	//query all votes
-	keys, err := query.GetAll(context, &votes)
-	if err != nil {
-		http.Error(res, err.Error(), http.StatusInternalServerError)
-		return
+	if current_user == nil {
+		url, err := user.LoginURL(context, req.URL.String())
+		handleError(res, err)
+		http.Redirect(res, req, url, http.StatusFound)
 	}
 
-	//attach the key queried to the struct
-	for index := range votes {
-		votes[index].ID = keys[index].IntID()
-	}
+	// create context and query the vote items
+	// context := appengine.NewContext(req)
 
-	renderTemplate(res, "header", nil)
+	// query := datastore.NewQuery("Vote").Order("-SubmissionTime").Limit(20)
+
+	// votes := make([]Vote, 0, 20)
+
+	// //query all votes
+	// keys, err := query.GetAll(context, &votes)
+	// if err != nil {
+	// 	http.Error(res, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
+
+	// //attach the key queried to the struct
+	// for index := range votes {
+	// 	votes[index].ID = keys[index].IntID()
+	// }
+
+	// renderTemplate(res, "header", nil)
+	// renderTemplate(res, "index.html", nil)
+	// renderTemplate(res, "votes.html", votes)
+	// renderTemplate(res, "footer", nil)
 	renderTemplate(res, "index.html", nil)
-	renderTemplate(res, "votes.html", votes)
-	renderTemplate(res, "footer", nil)
 }
 
 func voteCreateHandler(res http.ResponseWriter, req *http.Request) {
@@ -119,43 +133,105 @@ func voteCreateHandler(res http.ResponseWriter, req *http.Request) {
 	renderTemplate(res, "footer", nil)
 }
 
-func voteDetailHandler(res http.ResponseWriter, req *http.Request) {
-	// create a context
+func voteHandler(res http.ResponseWriter, req *http.Request) {
+	// create context and query the vote items
 	context := appengine.NewContext(req)
 
-	//get the variable
-	urlVar := mux.Vars(req)
-	vote_id, _ := strconv.ParseInt(urlVar["vote_id"], 10, 64)
+	current_user := user.Current(context)
+	if req.Method == "POST" {
 
-	//construct key and variable to hold vote
-	var vote Vote
-	key := datastore.NewKey(context, "Vote", "", vote_id, nil)
+		//parse the body of the request
+		decoder := json.NewDecoder(req.Body)
 
-	// query and attach the key
-	datastore.Get(context, key, &vote)
-	vote.ID = key.IntID()
-
-	query := datastore.NewQuery("VoteItem").Order("-SubmissionTime").Ancestor(key).Limit(20)
-	vote_items := make([]VoteItem, 0, 20)
-
-	//query all votes
-	keys, err := query.GetAll(context, &vote_items)
-	handleError(res, err)
-	for index := range vote_items {
-		vote_items[index].ID = keys[index].IntID()
-		vote_items[index].ParentID = vote_id
-		vote_items[index].Upvote, err = Count(context, strconv.FormatInt(vote_items[index].ID, 10))
+		//decode and set the fields
+		var vote Vote
+		err := decoder.Decode(&vote)
 		handleError(res, err)
+
+		vote.Submitter = current_user.String()
+		vote.SubmissionTime = time.Now()
+
+		key, err := datastore.Put(context, datastore.NewIncompleteKey(context, "Vote", nil), &vote)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		vote.ID = key.IntID()
+		response, err := json.Marshal(vote)
+		handleError(res, err)
+		fmt.Fprintf(res, "%s", response)
+		return
 	}
 
-	// current_user := user.Current(context)
-	url, err := user.LogoutURL(context, "/")
-	handleError(res, err)
+	query := datastore.NewQuery("Vote").Order("-SubmissionTime").Limit(20)
+	votes := make([]Vote, 0, 20)
 
-	renderTemplate(res, "header", url)
-	renderTemplate(res, "vote_detail.html", vote)
-	renderTemplate(res, "vote_items.html", vote_items)
-	renderTemplate(res, "footer", nil)
+	//query all votes
+	keys, err := query.GetAll(context, &votes)
+	if err != nil {
+		http.Error(res, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	//attach the key queried to the struct
+	for index := range votes {
+		votes[index].ID = keys[index].IntID()
+	}
+
+	response, err := json.Marshal(votes)
+	handleError(res, err)
+	fmt.Fprintf(res, "%s", response)
+
+}
+
+func voteDetailHandler(res http.ResponseWriter, req *http.Request) {
+	// create a context
+	// context := appengine.NewContext(req)
+
+	// //get the variable
+	// urlVar := mux.Vars(req)
+	// vote_id, _ := strconv.ParseInt(urlVar["vote_id"], 10, 64)
+
+	//construct key and variable to hold vote
+	// var vote Vote
+	// key := datastore.NewKey(context, "Vote", "", vote_id, nil)
+
+	// query and attach the key
+	// err := datastore.Get(context, key, &vote)
+	// if err != nil {
+	// 	fmt.Fprintf(res, format, ...)
+	// }
+	// vote.ID = key.IntID()
+	vote := Vote{
+		Submitter:      "Anonymous",
+		Title:          "TesT",
+		Description:    "TesT",
+		SubmissionTime: time.Now(),
+	}
+	response, err := json.Marshal(vote)
+	handleError(res, err)
+	fmt.Fprintf(res, "%s", response)
+
+	// query := datastore.NewQuery("VoteItem").Order("-SubmissionTime").Ancestor(key).Limit(20)
+	// vote_items := make([]VoteItem, 0, 20)
+
+	// //query all votes
+	// keys, err := query.GetAll(context, &vote_items)
+	// handleError(res, err)
+	// for index := range vote_items {
+	// 	vote_items[index].ID = keys[index].IntID()
+	// 	vote_items[index].ParentID = vote_id
+	// 	vote_items[index].Upvote, err = Count(context, strconv.FormatInt(vote_items[index].ID, 10))
+	// 	handleError(res, err)
+	// }
+	// current_user := user.Current(context)
+	// url, err := user.LogoutURL(context, "/")
+	// handleError(res, err)
+
+	// renderTemplate(res, "header", url)
+	// renderTemplate(res, "vote_detail.html", vote)
+	// renderTemplate(res, "vote_items.html", vote_items)
+	// renderTemplate(res, "footer", nil)
 
 }
 
@@ -276,6 +352,7 @@ func init() {
 	router := mux.NewRouter()
 	router.HandleFunc("/", rootHandler)
 	router.HandleFunc("/vote/create", voteCreateHandler)
+	router.HandleFunc("/vote", voteHandler)
 	router.HandleFunc("/vote/{vote_id}", voteDetailHandler)
 	router.HandleFunc("/upvote", upvoteHandler)
 

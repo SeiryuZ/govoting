@@ -1,0 +1,44 @@
+<div class="row">
+	<div class="hero-unit span12">
+		Welcome to GoVoting apps
+	</div>
+</div>	
+<div class="row add-vote-button">
+	<div class="span2 offset10">
+		<button class="btn btn-primary" ng-click="showForm()">Create Vote</button>
+	</div>
+</div>
+<div class="row create-vote-form hide">
+	<div class="span12">
+		<form ng-submit="saveVote(vote)" class="form-horizontal">
+            <div class="control-group">
+              <label class="control-label" for="Title">Title</label>
+              <div class="controls">
+                <input type="text" id="Title" placeholder="Title" class="span6" ng-model="vote.Title">
+              </div>
+            </div>
+            <div class="control-group">
+              <label class="control-label" for="Description">Description</label>
+              <div class="controls">
+                <textarea id="Description" placeholder="Description" class="span6" ng-model="vote.Description"></textarea>
+              </div>
+            </div>
+            <div class="control-group">
+              <div class="controls">
+                <button type="submit" class="btn">Create</button>
+              </div>
+            </div>
+          </form>
+	</div>
+</div>
+
+<div class="row " ng-repeat="vote in votes">
+	<div class="span12 row-vote">
+		{{vote.Title}}
+	</div>
+</div>
+
+
+
+
+

@@ -12,5 +12,22 @@ handlers:
 - url: /assets
   static_dir: assets
 
+### APP directory for ANGULAR ###
+
+- url: /scripts
+  static_dir: app/scripts
+
+- url: /styles
+  static_dir: app/styles
+
+- url: /components
+  static_dir: app/components
+
+- url: /views
+  static_dir: app/views
+
+### APP directory for ANGULAR ###
+
+
 - url: /.*
   script: _go_app
